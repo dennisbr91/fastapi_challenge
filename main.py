@@ -1,17 +1,18 @@
 from datetime import timedelta
+from typing import List
 
 from fastapi import FastAPI, Depends, HTTPException, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 import requests
 
-from fastapi_challenge import db_config
-from fastapi_challenge.authentication import get_current_user, authenticate_user, create_access_token
+import fastapi_challenge.schema
+from fastapi_challenge.authentication import authenticate_user, create_access_token, get_current_user
 from fastapi_challenge.db_config import get_db, database
-from fastapi_challenge.models import User, Log
-from fastapi_challenge.schema import UserCreate, UserResponse
+from fastapi_challenge.models import User, Log, Task
+from fastapi_challenge.schema import UserCreate, UserResponse, TaskCreate
 from fastapi_challenge.settings import ACCESS_TOKEN_EXPIRE_MINUTES, WEATHER_API_KEY
-from fastapi_challenge.user_register import create_user
+from fastapi_challenge.mutations import create_user, get_task, get_tasks
 
 app = FastAPI()
 
@@ -26,7 +27,9 @@ async def add_ip_country_weather(request: Request, call_next):
     city = ip_response.json().get("city", "Unknown")
     weather_response = requests.get(f"http://api.weatherapi.com/v1/current.json?key={WEATHER_API_KEY}&q={city}")
     weather = weather_response.json().get("current", {})
-
+    print("client_ip: ", client_ip)
+    print("country: ", country)
+    print("weather: ", weather)
     async with database.transaction():
         query = Log.__table__.insert().values(ip=client_ip, country=country, weather=weather)
         await database.execute(query)
@@ -56,13 +59,50 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = 
     return {"access_token": access_token, "token_type": "bearer"}
 
 
-@app.get("/")
-async def read_root(request: Request):
-    return {
-        "ip": request.state.client_ip,
-        "country": request.state.country,
-        "weather": request.state.weather
-    }
+@app.get("/tasks", response_model=List[fastapi_challenge.schema.Task])
+def read_tasks(skip: int = 0, limit: int = 10, db: Session = Depends(get_db),
+               current_user: User = Depends(get_current_user)):
+    tasks = get_tasks(db, skip=skip, limit=limit)
+    return tasks
+
+
+@app.get("/tasks/{task_id}", response_model=fastapi_challenge.schema.Task)
+def read_task(task_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    task = get_task(db, task_id=task_id)
+    if task is None:
+        raise HTTPException(status_code=404, detail="Task not found")
+    return task
+
+
+@app.post("/tasks", response_model=fastapi_challenge.schema.Task)
+def create_task(task: TaskCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    return create_task(db=db, task=task)
+
+
+@app.delete("/tasks/{taskId}", response_model=fastapi_challenge.schema.Task)
+def delete_task(taskId: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    task = delete_task(db, taskId)
+    if task is None:
+        raise HTTPException(status_code=404, detail="Task not found")
+    return task
+
+
+@app.put("/tasks/{taskId}", response_model=fastapi_challenge.schema.Task)
+def update_task(taskId: str, task_update: TaskCreate, db: Session = Depends(get_db),
+                current_user: User = Depends(get_current_user)):
+    task = update_task(db, taskId, task_update)
+    if task is None:
+        raise HTTPException(status_code=404, detail="Task not found")
+    return task
+
+
+# @app.get("/")
+# async def read_root(request: Request):
+#     return {
+#         "ip": request.state.client_ip,
+#         "country": request.state.country,
+#         "weather": request.state.weather
+#     }
 
 
 @app.on_event("startup")

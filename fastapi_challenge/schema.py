@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional
+import uuid
 
 
 class UserCreate(BaseModel):
@@ -10,6 +10,23 @@ class UserCreate(BaseModel):
 class UserResponse(BaseModel):
     id: int
     username: str
+
+    class Config:
+        orm_mode = True
+
+
+class TaskBase(BaseModel):
+    name: str
+    description: str
+
+
+class TaskCreate(TaskBase):
+    pass
+
+
+class Task(TaskBase):
+    id: uuid.UUID
+    status: str
 
     class Config:
         orm_mode = True

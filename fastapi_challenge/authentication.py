@@ -6,7 +6,7 @@ from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 
 from fastapi_challenge.db_config import get_db
-from fastapi_challenge.models import User, TokenData
+from fastapi_challenge.models import User
 from fastapi_challenge.settings import SECRET_KEY, ALGORITHM
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
