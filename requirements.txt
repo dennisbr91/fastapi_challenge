@@ -1,0 +1,14 @@
+fastapi
+uvicorn
+sqlalchemy
+psycopg2-binary
+passlib[bcrypt]
+python-jose
+pycryptodome
+bcrypt==4.0.1
+python-multipart
+alembic
+pyjwt
+requests
+databases
+asyncpg
