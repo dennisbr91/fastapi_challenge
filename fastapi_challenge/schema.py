@@ -12,7 +12,7 @@ class UserResponse(BaseModel):
     username: str
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class TaskBase(BaseModel):
@@ -29,4 +29,4 @@ class Task(TaskBase):
     status: str
 
     class Config:
-        orm_mode = True
+        from_attributes = True
